@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apify CLI Workshop: build the Claude Code log miner</title>
+<style>
+:root{
+  --bg:#0e0d09;--s1:#1a1914;--s2:#111009;--border:#2e2d28;
+  --yellow:#f2c000;--ydim:#b38a00;
+  --teal:#1d9e75;--teal2:#0f6e56;
+  --amber:#ef9f27;--green:#639922;--coral:#d85a30;
+  --purple:#7f77dd;--blue:#378add;
+  --text:#d4d2c8;--muted:#888780;--dim:#444441;
+  --mono:'Space Mono','Courier New',monospace;
+  --sans:system-ui,-apple-system,sans-serif;
+  --sidebar:220px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.7;display:flex;flex-direction:column;min-height:100vh}
+.topbar{position:sticky;top:0;z-index:200;background:rgba(14,13,9,.97);border-bottom:1px solid var(--border);height:48px;display:flex;align-items:center;padding:0 24px;gap:24px;flex-shrink:0}
+.topbar-logo{font-family:var(--mono);font-size:13px;color:var(--yellow);display:flex;align-items:center;gap:10px;text-decoration:none}
+.topbar-logo .initials{font-size:17px;font-weight:700;letter-spacing:.05em}
+.topbar-logo .slash{color:var(--dim)}
+.topbar-links{display:flex;gap:2px;margin-left:auto}
+.topbar-links a{font-size:12px;color:var(--muted);text-decoration:none;padding:5px 10px;border-radius:4px;transition:color .15s}
+.topbar-links a:hover{color:var(--text)}
+.body-wrap{display:flex;flex:1;max-width:1140px;margin:0 auto;width:100%}
+.sidebar{width:var(--sidebar);flex-shrink:0;position:sticky;top:48px;height:calc(100vh - 48px);overflow-y:auto;padding:32px 0;border-right:1px solid var(--border)}
+.sidebar-section{padding:0 20px 24px}
+.sidebar-heading{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+.nav-link{display:block;font-size:12px;color:var(--muted);text-decoration:none;padding:4px 8px;border-radius:4px;transition:all .15s;margin-bottom:1px}
+.nav-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.nav-link.active{color:var(--yellow);background:rgba(242,192,0,.06)}
+.sidebar-divider{border:none;border-top:1px solid var(--border);margin:4px 20px 20px}
+.sidebar-meta{padding:0 20px}
+.sidebar-meta a{display:block;font-size:11px;color:var(--dim);text-decoration:none;padding:3px 0;transition:color .15s}
+.sidebar-meta a:hover{color:var(--muted)}
+.sidebar-meta span{display:block;font-size:11px;color:var(--dim);padding:3px 0}
+main{flex:1;padding:0 48px 80px;min-width:0}
+.hero{padding:48px 0 40px;border-bottom:1px solid var(--border);margin-bottom:56px}
+.hero-eyebrow{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;margin-bottom:16px}
+.hero h1{font-family:var(--mono);font-size:34px;font-weight:700;color:var(--yellow);line-height:1.15;margin-bottom:16px}
+.hero-sub{font-size:15px;color:var(--muted);max-width:640px;line-height:1.8;margin-bottom:24px}
+.pills{display:flex;flex-wrap:wrap;gap:10px}
+.pill{font-family:var(--mono);font-size:11px;color:var(--muted);border:1px solid var(--border);border-radius:3px;padding:3px 10px}
+.pill strong{color:var(--text);font-weight:600}
+.section{margin-bottom:72px;scroll-margin-top:72px}
+.section-comment{font-family:var(--mono);font-size:12px;color:var(--dim);margin-bottom:10px}
+.section h1{font-size:26px;font-weight:700;color:#fff;margin-bottom:12px;line-height:1.2}
+.section .lead{font-size:14px;color:var(--muted);line-height:1.8;margin-bottom:28px;max-width:680px}
+h2{font-size:15px;font-weight:600;color:var(--text);margin:32px 0 10px}
+h3{font-family:var(--mono);font-size:12px;color:var(--teal);margin:24px 0 8px;letter-spacing:.04em}
+p{color:var(--muted);line-height:1.8;margin-bottom:12px;font-size:13px}
+strong{color:var(--text);font-weight:600}
+code{font-family:var(--mono);font-size:11px;background:#1a1914;color:var(--amber);padding:1px 5px;border-radius:3px}
+a{color:var(--teal);text-decoration:none}
+a:hover{text-decoration:underline}
+pre{background:#070b05;border:1px solid #1c2e18;border-radius:6px;padding:18px 22px;font-family:var(--mono);font-size:12px;color:#8dc870;line-height:1.8;overflow-x:auto;margin:12px 0;white-space:pre}
+pre.ascii{color:var(--muted);font-size:11px;line-height:1.6}
+pre.ascii .hi{color:var(--yellow)}
+pre.ascii .ht{color:var(--teal)}
+pre.ascii .ha{color:var(--amber)}
+pre.ascii .hg{color:var(--green)}
+pre.ascii .hp{color:var(--purple)}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:8px;margin:12px 0}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--s2);color:var(--muted);font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;padding:9px 14px;text-align:left;border-bottom:1px solid var(--border)}
+td{padding:9px 14px;border-bottom:1px solid rgba(46,45,40,.4);color:var(--text);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+.yes{color:var(--teal);font-weight:600}
+.no{color:var(--coral)}
+.win{color:var(--teal);font-weight:600}
+.feat{color:var(--muted);font-size:12px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.card{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:16px 18px}
+.card h3{margin:0 0 6px;font-family:var(--mono);font-size:11px;color:var(--teal);letter-spacing:.06em;text-transform:uppercase}
+.card p{font-size:12px;margin:0;line-height:1.7}
+.steps{counter-reset:step;list-style:none;margin:12px 0}
+.steps li{counter-increment:step;display:flex;gap:14px;margin-bottom:14px;font-size:13px;color:var(--muted)}
+.steps li::before{content:counter(step);font-family:var(--mono);font-size:10px;color:var(--yellow);border:1px solid var(--ydim);border-radius:3px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.steps li strong{color:var(--text)}
+.kicker-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:24px 0}
+.kicker{background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:14px 16px}
+.kicker-val{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--yellow);margin-bottom:4px}
+.kicker-lbl{font-size:11px;color:var(--muted)}
+.nav-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:24px 0}
+.nav-card{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:16px 18px;transition:border-color .15s;text-decoration:none;display:block}
+.nav-card:hover{border-color:#3e3d38;text-decoration:none}
+.nav-card-title{font-size:13px;font-weight:600;color:#fff;margin-bottom:4px}
+.nav-card-sub{font-size:12px;color:var(--muted);margin-bottom:8px}
+.nav-card-tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-family:var(--mono);font-size:10px;color:var(--dim);border:1px solid var(--border);padding:1px 6px;border-radius:2px}
+.badge-row{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.badge{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:3px}
+.by{background:#201a00;color:var(--yellow);border:1px solid #3a3000}
+.bt{background:#071510;color:var(--teal);border:1px solid #0d3022}
+.ba{background:#1c1100;color:var(--amber);border:1px solid #3a2200}
+.bg{background:#0f1a06;color:var(--green);border:1px solid #1e3a0a}
+.bp{background:#100f20;color:var(--purple);border:1px solid #2a2860}
+.bc{background:#1e0a04;color:var(--coral);border:1px solid #3e1408}
+.bm{background:var(--s1);color:var(--muted);border:1px solid var(--border)}
+.verdict{background:#080f07;border:1px solid var(--teal2);border-radius:8px;padding:22px 26px;margin:20px 0}
+.verdict-row{display:flex;gap:14px;margin-bottom:8px;font-size:13px}
+.verdict-row:last-child{margin-bottom:0}
+.vkey{font-family:var(--mono);font-size:10px;color:var(--ydim);min-width:100px;padding-top:2px}
+.vval{color:var(--muted);line-height:1.7}
+footer{border-top:1px solid var(--border);padding:24px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim)}
+footer a{color:var(--muted);text-decoration:none}
+footer a:hover{color:var(--yellow)}
+.checkbox-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;font-size:13px;color:var(--muted)}
+.checkbox-row .box{font-family:var(--mono);color:var(--dim);flex-shrink:0}
+.phase-tag{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:3px;margin-bottom:10px}
+.pt-capture{background:#071510;color:var(--teal);border:1px solid #0d3022}
+.pt-gap{background:#1c1100;color:var(--amber);border:1px solid #3a2200}
+.pt-auto{background:#100f20;color:var(--purple);border:1px solid #2a2860}
+.pt-output{background:#0f1a06;color:var(--green);border:1px solid #1e3a0a}
+@media(max-width:800px){.body-wrap{flex-direction:column}.sidebar{display:none}main{padding:0 20px 60px}.cards,.kicker-grid,.nav-cards{grid-template-columns:1fr}}
+</style></head><body>
+<div class="topbar">
+  <a class="topbar-logo" href="https://github.com/Organized-AI"><span class="initials">AP</span><span class="slash">/</span><span>Apify CLI · Workshop</span></a>
+  <div class="topbar-links">
+    <a href="#intro">Intro</a><a href="#setup">Setup</a><a href="#capture">Capture</a><a href="#gap">Gap</a><a href="#auto">Automate</a><a href="#output">Output</a><a href="#patterns">Wiring</a>
+    <span style="width:1px;height:16px;background:var(--border);margin:0 8px"></span>
+    <a href="https://guide.organizedai.vip/apify-cli" style="color:var(--muted)">Guide</a>
+    <a href="https://guide.organizedai.vip/apify-cli/workshop" style="color:var(--yellow);font-weight:700">Workshop</a>
+    <a href="https://wiki.organizedai.vip/apify-cli" style="color:var(--muted)">Wiki</a>
+    <a href="https://arch.organizedai.vip/apify-cli" style="color:var(--muted)">Arch</a>
+  </div>
+</div>
+<div class="body-wrap">
+<nav class="sidebar">
+  <div class="sidebar-section"><div class="sidebar-heading">Workshop steps</div>
+    <a class="nav-link active" href="#intro">Intro</a>
+    <a class="nav-link" href="#setup">0 · Setup</a>
+    <a class="nav-link" href="#capture">1 · Capture</a>
+    <a class="nav-link" href="#gap">2 · Gap analysis</a>
+    <a class="nav-link" href="#auto">3 · Automate</a>
+    <a class="nav-link" href="#output">4 · Output</a>
+    <a class="nav-link" href="#patterns">Wiring patterns</a>
+  </div>
+  <hr class="sidebar-divider">
+  <div class="sidebar-meta">
+    <a href="https://guide.organizedai.vip/apify-cli">Guide ↗</a>
+    <a href="https://wiki.organizedai.vip/apify-cli">Wiki ↗</a>
+    <a href="https://arch.organizedai.vip/apify-cli">Arch ↗</a>
+  </div>
+  <hr class="sidebar-divider" style="margin-top:12px">
+  <div class="sidebar-meta"><span>apify-cli / workshop</span><span>7 sections</span><span>AI That Works · Austin</span></div>
+</nav>
+<main>
+<div class="hero" id="home">
+  <div class="hero-eyebrow">APIFY CLI // LIVE WORKSHOP // AI THAT WORKS · AUSTIN</div>
+  <h1>Build an Actor that reads<br>your own Claude Code logs.</h1>
+  <p class="hero-sub">A self-improving research loop, live, in one session. You point an Apify Actor at the session files already sitting on your disk at <code>~/.claude/projects/**/*.jsonl</code>, extract a structured usage taxonomy, cross-reference it against what you have installed, and leave with a ranked list of gaps instead of a list of things you already own.</p>
+  <div class="pills">
+    <div class="pill"><strong>4</strong> layers</div>
+    <div class="pill"><strong>1</strong> Actor</div>
+    <div class="pill">no polling</div>
+    <div class="pill">Antler VC · Austin</div>
+    <div class="pill">bring a laptop</div>
+  </div>
+</div>
+
+<div class="section" id="intro">
+  <div class="section-comment">// HOW TONIGHT WORKS</div>
+  <h1>Four layers, built in order</h1>
+  <p class="lead">Each layer produces the input for the next. We build them in sequence so the Actor is runnable and inspectable after every step, not just at the end.</p>
+<pre class="ascii">
+              CLAUDE CODE SESSION LOGS  ·  ~/.claude/projects/**/*.jsonl
+
+                                    │
+                                    ▼
+   ┌───────────────────┐   ┌───────────────────┐   ┌───────────────────┐   ┌───────────────────┐
+   │  <span class="ht">1 · CAPTURE</span>       │──▶│  <span class="ha">2 · GAP ANALYSIS</span>  │──▶│  <span class="hp">3 · AUTOMATE</span>      │──▶│  <span class="hg">4 · OUTPUT</span>        │
+   │  parse JSONL →    │   │  cross-ref vs.     │   │  webhook on run    │   │  vault notes,      │
+   │  usage taxonomy   │   │  installed skills, │   │  success, fetch    │   │  skill scaffolds,  │
+   │                    │   │  score + gate      │   │  on event          │   │  plugin stubs      │
+   └───────────────────┘   └───────────────────┘   └───────────────────┘   └───────────────────┘
+</pre>
+  <div class="kicker-grid">
+    <div class="kicker"><div class="kicker-val">0 → live</div><div class="kicker-lbl">empty folder to deployed Actor</div></div>
+    <div class="kicker"><div class="kicker-val">no polling</div><div class="kicker-lbl">webhook fetches on ACTOR.RUN.SUCCEEDED</div></div>
+    <div class="kicker"><div class="kicker-val">4 doors</div><div class="kicker-lbl">skills · cron · webhook · MCP</div></div>
+  </div>
+  <div class="nav-cards">
+    <a class="nav-card" href="#setup"><div class="nav-card-title">0 · Setup</div><div class="nav-card-sub">Install, log in, scaffold</div><div class="nav-card-tags"><span class="tag">cli</span></div></a>
+    <a class="nav-card" href="#capture"><div class="nav-card-title">1 · Capture</div><div class="nav-card-sub">Parse JSONL into a taxonomy</div><div class="nav-card-tags"><span class="tag">actor</span></div></a>
+    <a class="nav-card" href="#gap"><div class="nav-card-title">2 · Gap analysis</div><div class="nav-card-sub">Score against what you own</div><div class="nav-card-tags"><span class="tag">scoring</span></div></a>
+    <a class="nav-card" href="#auto"><div class="nav-card-title">3 · Automate</div><div class="nav-card-sub">Webhook, no polling</div><div class="nav-card-tags"><span class="tag">webhook</span></div></a>
+  </div>
+</div>
+
+<div class="section" id="setup">
+  <span class="phase-tag pt-capture">Phase 0 · Setup</span>
+  <div class="section-comment">// BEFORE WE WRITE ANY LOGIC</div>
+  <h1>Install, log in, scaffold</h1>
+  <p class="lead">Same five-command loop every Apify Actor starts with. Get here before the room splits into pairs.</p>
+  <ul class="steps">
+    <li><strong>Install the CLI.</strong> <code>curl -fsSL https://apify.com/install-cli.sh | bash</code> or <code>brew install apify-cli</code>. Verify with <code>apify --version</code>.</li>
+    <li><strong>Log in.</strong> <code>apify login</code> — grab your token from console.apify.com/settings/integrations.</li>
+    <li><strong>Scaffold the project.</strong> <code>apify create claude-log-miner</code>, pick a plain JS/TS template — no Crawlee needed, this Actor reads local files, it doesn't crawl the web.</li>
+    <li><strong>Confirm the shape.</strong> You should have <code>.actor/actor.json</code>, <code>src/main.js</code>, and a <code>Dockerfile</code> in the folder.</li>
+  </ul>
+<pre>
+curl -fsSL https://apify.com/install-cli.sh | bash
+apify --version
+
+apify login
+apify create claude-log-miner
+cd claude-log-miner
+</pre>
+</div>
+
+<div class="section" id="capture">
+  <span class="phase-tag pt-capture">Phase 1 · Capture</span>
+  <div class="section-comment">// TURN A MESSY LOG INTO QUERYABLE DATA</div>
+  <h1>Parse JSONL into a usage taxonomy</h1>
+  <p class="lead">Almost nobody reads <code>~/.claude/projects/**/*.jsonl</code> directly. The Actor does, and turns each session into a structured record: tool_use events, MCP server names, npm/pip packages, file extensions, keyword domains.</p>
+  <ul class="steps">
+    <li><strong>Read input.</strong> <code>Actor.getInput()</code> — take a glob path or a directory to scan for session files.</li>
+    <li><strong>Stream + parse each line.</strong> Each JSONL line is one event; walk them and bucket by type (<code>tool_use</code>, MCP calls, imports referenced, domains touched).</li>
+    <li><strong>Push one record per session.</strong> <code>Actor.pushData()</code> a structured taxonomy object per session file, not per line — keep the Dataset queryable.</li>
+    <li><strong>Run it locally.</strong> <code>apify run</code>, then check <code>./storage/datasets/default</code> for the output before pushing to the cloud.</li>
+  </ul>
+<pre>
+import { Actor } from 'apify';
+
+await Actor.init();
+const { sessionsGlob } = await Actor.getInput();
+
+// ...walk JSONL files, bucket events into a taxonomy...
+
+await Actor.pushData({
+  sessionId,
+  tools: [...toolUseEvents],
+  mcpServers: [...mcpNames],
+  packages: [...importedPackages],
+  domains: [...keywordDomains],
+});
+await Actor.exit();
+</pre>
+<pre>
+apify run
+apify push
+</pre>
+  <div class="verdict">
+    <div class="verdict-row"><div class="vkey">Checkpoint</div><div class="vval"><strong>You should have a Dataset with one row per session</strong> before moving to gap analysis. If it's empty, check the glob path first — this is the most common stall point.</div></div>
+  </div>
+</div>
+
+<div class="section" id="gap">
+  <span class="phase-tag pt-gap">Phase 2 · Gap analysis</span>
+  <div class="section-comment">// FLOAT THE HIGHEST-VALUE GAPS TO THE TOP</div>
+  <h1>Score against what you already own</h1>
+  <p class="lead">Cross-reference the taxonomy against your installed skills and the plugin marketplace. An adjacency formula scores each candidate gap; a significance gate keeps a three-message session from firing a research run.</p>
+  <ul class="steps">
+    <li><strong>Load your installed set.</strong> Skills directory + plugin marketplace listing, as comparison data.</li>
+    <li><strong>Score candidates.</strong> Adjacency: how close is this repeated pattern to something you don't have, weighted by frequency across sessions.</li>
+    <li><strong>Apply the significance gate.</strong> Minimum session depth / repeat count before a candidate counts — this is what keeps the loop from becoming noise.</li>
+    <li><strong>Rank and push.</strong> Output a ranked gap list to a second Dataset (or the same one, tagged <code>type: gap</code>).</li>
+  </ul>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Signal</th><th>Source</th><th>Weight</th></tr></thead>
+    <tbody>
+      <tr><td class="feat">Repeated tool_use with no matching skill</td><td>Capture layer</td><td>High</td></tr>
+      <tr><td class="feat">MCP server referenced but not connected</td><td>Capture layer</td><td>High</td></tr>
+      <tr><td class="feat">Package imported once, never again</td><td>Capture layer</td><td>Low (filtered by gate)</td></tr>
+      <tr><td class="feat">Domain touched across 3+ sessions</td><td>Capture layer</td><td>Medium</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<div class="section" id="auto">
+  <span class="phase-tag pt-auto">Phase 3 · Automate</span>
+  <div class="section-comment">// NO POLLING</div>
+  <h1>Webhook on run success</h1>
+  <p class="lead">Attach an ad-hoc webhook so <code>ACTOR.RUN.SUCCEEDED</code> fires with the run ID and dataset ID in the payload. Results get fetched the moment they exist.</p>
+  <ul class="steps">
+    <li><strong>Console → Integrations → Webhooks.</strong> Add an ad-hoc webhook scoped to this Actor, event <code>ACTOR.RUN.SUCCEEDED</code>.</li>
+    <li><strong>Point it at a receiver.</strong> Any HTTPS endpoint — a Worker, a Zapier hook, whatever you've got live tonight.</li>
+    <li><strong>Read the payload.</strong> <code>runId</code> + <code>defaultDatasetId</code> land in the POST body — no need to guess or poll for completion.</li>
+    <li><strong>Fetch on event.</strong> <code>GET /v2/datasets/{id}/items</code> the instant the webhook fires.</li>
+  </ul>
+<pre>
+curl "https://api.apify.com/v2/acts/USERNAME~claude-log-miner/runs/last/dataset/items?token=APIFY_TOKEN"
+</pre>
+  <h3>Four ways to wire this into an agent</h3>
+  <p>Jump to <a href="#patterns">the wiring patterns table</a> for the full comparison — this is the strongest closing point of the night.</p>
+</div>
+
+<div class="section" id="output">
+  <span class="phase-tag pt-output">Phase 4 · Output</span>
+  <div class="section-comment">// MAKE IT REUSABLE, NOT ANOTHER TAB</div>
+  <h1>Route findings into things that compound</h1>
+  <p class="lead">A ranked gap list is only useful if it turns into something you'd actually act on. Route it into three shapes.</p>
+  <div class="cards">
+    <div class="card"><h3>Vault notes</h3><p>One markdown note per significant gap, dated, linkable — the raw research record.</p></div>
+    <div class="card"><h3>Skill scaffolds</h3><p>A stub <code>SKILL.md</code> for the highest-scored gap, ready to flesh out instead of starting from a blank file.</p></div>
+    <div class="card"><h3>Plugin stubs</h3><p>If the gap maps to a recurring MCP need, a minimal plugin scaffold instead of a one-off script.</p></div>
+  </div>
+  <div class="verdict">
+    <div class="verdict-row"><div class="vkey">The point</div><div class="vval"><strong>You leave with a working Actor in your own Apify account</strong> and a repeatable pattern for an agent that reads its own history and improves on it — not a one-time report.</div></div>
+  </div>
+</div>
+
+<div class="section" id="patterns">
+  <div class="section-comment">// CLOSING · WHAT EACH COSTS IN CONTEXT WINDOW</div>
+  <h1>Four ways to wire Apify into an agent</h1>
+  <p class="lead">Same Actor, four different ways an agent can reach it. The right choice depends on how often the gap-check needs to run and how much context budget you're willing to spend keeping it warm.</p>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Pattern</th><th>How it fires</th><th>Context cost</th><th>Best for</th></tr></thead>
+    <tbody>
+      <tr><td class="feat"><strong>Skills</strong></td><td>Agent decides to call it, on demand</td><td class="win">Low — loaded only when relevant</td><td>Ad-hoc "check my gaps now" asks</td></tr>
+      <tr><td class="feat"><strong>Cron prefetch</strong></td><td>Scheduled Actor run, results cached ahead of time</td><td class="win">Low at query time, cost paid upfront</td><td>Daily/weekly digest, no live wait</td></tr>
+      <tr><td class="feat"><strong>Webhook-triggered turns</strong></td><td><code>ACTOR.RUN.SUCCEEDED</code> pushes a new agent turn</td><td>Medium — a turn is spent per event</td><td>Reacting the moment research finishes</td></tr>
+      <tr><td class="feat"><strong>Direct MCP</strong></td><td>Actor exposed as a live MCP tool, called mid-conversation</td><td class="no">Highest — tool schema held in context</td><td>Tight loops, iterative exploration</td></tr>
+    </tbody>
+  </table></div>
+  <div class="verdict">
+    <div class="verdict-row"><div class="vkey">Rule of thumb</div><div class="vval">Push work to <strong>cron</strong> or a <strong>webhook</strong> whenever the result doesn't need to be decided on live — that's context budget you get back for the parts of the conversation that actually need it.</div></div>
+  </div>
+</div>
+
+</main></div>
+<footer>apify-cli workshop · <a href="https://guide.organizedai.vip/apify-cli">guide</a> · <a href="https://guide.organizedai.vip/apify-cli/workshop">workshop</a> · <a href="https://wiki.organizedai.vip/apify-cli">wiki</a> · <a href="https://arch.organizedai.vip/apify-cli">arch</a> · <a href="https://organizedai.vip">organizedai.vip</a></footer>
+<script>
+const links=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('.section[id]');
+function setActive(){let c='';sections.forEach(s=>{if(window.scrollY>=s.offsetTop-80)c=s.id});links.forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+c))}
+window.addEventListener('scroll',setActive,{passive:true});setActive();
+</script></body></html>

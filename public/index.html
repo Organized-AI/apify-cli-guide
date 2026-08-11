@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apify CLI: Build Actors, reach them everywhere</title>
+<style>
+:root{
+  --bg:#0e0d09;--s1:#1a1914;--s2:#111009;--border:#2e2d28;
+  --yellow:#f2c000;--ydim:#b38a00;
+  --teal:#1d9e75;--teal2:#0f6e56;
+  --amber:#ef9f27;--green:#639922;--coral:#d85a30;
+  --purple:#7f77dd;--blue:#378add;
+  --text:#d4d2c8;--muted:#888780;--dim:#444441;
+  --mono:'Space Mono','Courier New',monospace;
+  --sans:system-ui,-apple-system,sans-serif;
+  --sidebar:220px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.7;display:flex;flex-direction:column;min-height:100vh}
+/* TOPBAR */
+.topbar{position:sticky;top:0;z-index:200;background:rgba(14,13,9,.97);border-bottom:1px solid var(--border);height:48px;display:flex;align-items:center;padding:0 24px;gap:24px;flex-shrink:0}
+.topbar-logo{font-family:var(--mono);font-size:13px;color:var(--yellow);display:flex;align-items:center;gap:10px;text-decoration:none}
+.topbar-logo .initials{font-size:17px;font-weight:700;letter-spacing:.05em}
+.topbar-logo .slash{color:var(--dim)}
+.topbar-links{display:flex;gap:2px;margin-left:auto}
+.topbar-links a{font-size:12px;color:var(--muted);text-decoration:none;padding:5px 10px;border-radius:4px;transition:color .15s}
+.topbar-links a:hover{color:var(--text)}
+/* LAYOUT */
+.body-wrap{display:flex;flex:1;max-width:1140px;margin:0 auto;width:100%}
+/* SIDEBAR */
+.sidebar{width:var(--sidebar);flex-shrink:0;position:sticky;top:48px;height:calc(100vh - 48px);overflow-y:auto;padding:32px 0;border-right:1px solid var(--border)}
+.sidebar-section{padding:0 20px 24px}
+.sidebar-heading{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+.nav-link{display:block;font-size:12px;color:var(--muted);text-decoration:none;padding:4px 8px;border-radius:4px;transition:all .15s;margin-bottom:1px}
+.nav-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.nav-link.active{color:var(--yellow);background:rgba(242,192,0,.06)}
+.sidebar-divider{border:none;border-top:1px solid var(--border);margin:4px 20px 20px}
+.sidebar-meta{padding:0 20px}
+.sidebar-meta a{display:block;font-size:11px;color:var(--dim);text-decoration:none;padding:3px 0;transition:color .15s}
+.sidebar-meta a:hover{color:var(--muted)}
+.sidebar-meta span{display:block;font-size:11px;color:var(--dim);padding:3px 0}
+/* MAIN */
+main{flex:1;padding:0 48px 80px;min-width:0}
+/* HERO */
+.hero{padding:48px 0 40px;border-bottom:1px solid var(--border);margin-bottom:56px}
+.hero-eyebrow{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;margin-bottom:16px}
+.hero h1{font-family:var(--mono);font-size:36px;font-weight:700;color:var(--yellow);line-height:1.15;margin-bottom:16px}
+.hero-sub{font-size:15px;color:var(--muted);max-width:640px;line-height:1.8;margin-bottom:24px}
+.pills{display:flex;flex-wrap:wrap;gap:10px}
+.pill{font-family:var(--mono);font-size:11px;color:var(--muted);border:1px solid var(--border);border-radius:3px;padding:3px 10px}
+.pill strong{color:var(--text);font-weight:600}
+/* SECTIONS */
+.section{margin-bottom:72px;scroll-margin-top:72px}
+.section-comment{font-family:var(--mono);font-size:12px;color:var(--dim);margin-bottom:10px}
+.section h1{font-size:26px;font-weight:700;color:#fff;margin-bottom:12px;line-height:1.2}
+.section .lead{font-size:14px;color:var(--muted);line-height:1.8;margin-bottom:28px;max-width:680px}
+h2{font-size:15px;font-weight:600;color:var(--text);margin:32px 0 10px}
+h3{font-family:var(--mono);font-size:12px;color:var(--teal);margin:24px 0 8px;letter-spacing:.04em}
+p{color:var(--muted);line-height:1.8;margin-bottom:12px;font-size:13px}
+strong{color:var(--text);font-weight:600}
+code{font-family:var(--mono);font-size:11px;background:#1a1914;color:var(--amber);padding:1px 5px;border-radius:3px}
+a{color:var(--teal);text-decoration:none}
+a:hover{text-decoration:underline}
+/* CODE */
+pre{background:#070b05;border:1px solid #1c2e18;border-radius:6px;padding:18px 22px;font-family:var(--mono);font-size:12px;color:#8dc870;line-height:1.8;overflow-x:auto;margin:12px 0;white-space:pre}
+pre.ascii{color:var(--muted);font-size:11px;line-height:1.6}
+pre.ascii .hi{color:var(--yellow)}
+pre.ascii .ht{color:var(--teal)}
+pre.ascii .ha{color:var(--amber)}
+pre.ascii .hg{color:var(--green)}
+pre.ascii .hp{color:var(--purple)}
+/* TABLES */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:8px;margin:12px 0}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--s2);color:var(--muted);font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;padding:9px 14px;text-align:left;border-bottom:1px solid var(--border)}
+td{padding:9px 14px;border-bottom:1px solid rgba(46,45,40,.4);color:var(--text);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+.yes{color:var(--teal);font-weight:600}
+.no{color:var(--coral)}
+.win{color:var(--teal);font-weight:600}
+.feat{color:var(--muted);font-size:12px}
+/* CARDS */
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.card{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:16px 18px}
+.card h3{margin:0 0 6px;font-family:var(--mono);font-size:11px;color:var(--teal);letter-spacing:.06em;text-transform:uppercase}
+.card p{font-size:12px;margin:0;line-height:1.7}
+/* STEPS */
+.steps{counter-reset:step;list-style:none;margin:12px 0}
+.steps li{counter-increment:step;display:flex;gap:14px;margin-bottom:10px;font-size:13px;color:var(--muted)}
+.steps li::before{content:counter(step);font-family:var(--mono);font-size:10px;color:var(--yellow);border:1px solid var(--ydim);border-radius:3px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.steps li strong{color:var(--text)}
+/* KICKER */
+.kicker-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:24px 0}
+.kicker{background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:14px 16px}
+.kicker-val{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--yellow);margin-bottom:4px}
+.kicker-lbl{font-size:11px;color:var(--muted)}
+/* NAV CARDS */
+.nav-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:24px 0}
+.nav-card{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:16px 18px;transition:border-color .15s;text-decoration:none;display:block}
+.nav-card:hover{border-color:#3e3d38;text-decoration:none}
+.nav-card-title{font-size:13px;font-weight:600;color:#fff;margin-bottom:4px}
+.nav-card-sub{font-size:12px;color:var(--muted);margin-bottom:8px}
+.nav-card-tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-family:var(--mono);font-size:10px;color:var(--dim);border:1px solid var(--border);padding:1px 6px;border-radius:2px}
+/* BADGES */
+.badge-row{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.badge{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:3px}
+.by{background:#201a00;color:var(--yellow);border:1px solid #3a3000}
+.bt{background:#071510;color:var(--teal);border:1px solid #0d3022}
+.ba{background:#1c1100;color:var(--amber);border:1px solid #3a2200}
+.bg{background:#0f1a06;color:var(--green);border:1px solid #1e3a0a}
+.bp{background:#100f20;color:var(--purple);border:1px solid #2a2860}
+.bc{background:#1e0a04;color:var(--coral);border:1px solid #3e1408}
+.bm{background:var(--s1);color:var(--muted);border:1px solid var(--border)}
+/* VERDICT */
+.verdict{background:#080f07;border:1px solid var(--teal2);border-radius:8px;padding:22px 26px;margin:20px 0}
+.verdict-row{display:flex;gap:14px;margin-bottom:8px;font-size:13px}
+.verdict-row:last-child{margin-bottom:0}
+.vkey{font-family:var(--mono);font-size:10px;color:var(--ydim);min-width:100px;padding-top:2px}
+.vval{color:var(--muted);line-height:1.7}
+/* FOOTER */
+footer{border-top:1px solid var(--border);padding:24px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim)}
+footer a{color:var(--muted);text-decoration:none}
+footer a:hover{color:var(--yellow)}
+/* RESPONSIVE */
+@media(max-width:800px){.body-wrap{flex-direction:column}.sidebar{display:none}main{padding:0 20px 60px}.cards,.kicker-grid,.nav-cards{grid-template-columns:1fr}}
+
+.freebie{background:linear-gradient(180deg,#141200,#0e0d09);border:1px solid var(--ydim);border-radius:10px;padding:26px 28px;margin:20px 0;display:grid;grid-template-columns:1fr auto;gap:28px;align-items:center}
+.freebie h3{font-family:var(--mono);color:var(--yellow);font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin:0 0 8px}
+.freebie p{margin:0 0 4px}
+.freebie .qr{background:#F2C000;border-radius:8px;padding:12px;line-height:0}
+.freebie .qr img{width:150px;height:150px;display:block;image-rendering:pixelated}
+.freebie .qr-cap{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;margin-top:8px;letter-spacing:.03em}
+@media(max-width:800px){.freebie{grid-template-columns:1fr;justify-items:center;text-align:center}}
+</style></head><body>
+<div class="topbar">
+  <a class="topbar-logo" href="https://github.com/Organized-AI"><span class="initials">AP</span><span class="slash">/</span><span>Apify CLI</span></a>
+  <div class="topbar-links"><a href="#overview">Overview</a><a href="#build">Build</a><a href="#access">Access</a><a href="#publish">Share</a><a href="#stack">Stack</a><a href="#deploy">Run</a>
+    <span style="width:1px;height:16px;background:var(--border);margin:0 8px"></span><a href="https://guide.organizedai.vip/apify-cli" style="color:var(--yellow);font-weight:700">Guide</a><a href="https://wiki.organizedai.vip/apify-cli" style="color:var(--muted);">Wiki</a><a href="https://arch.organizedai.vip/apify-cli" style="color:var(--muted);">Arch</a>
+    <a href="https://github.com/Organized-AI" style="margin-left:8px;color:var(--teal)">GitHub</a>
+  </div>
+</div>
+<div class="body-wrap">
+<nav class="sidebar">
+  <div class="sidebar-section"><div class="sidebar-heading">On this page</div><a class="nav-link active" href="#overview">Overview</a><a class="nav-link" href="#build">Build</a><a class="nav-link" href="#access">Access</a><a class="nav-link" href="#publish">Share</a><a class="nav-link" href="#stack">Stack</a><a class="nav-link" href="#deploy">Run</a></div>
+  <hr class="sidebar-divider">
+  <div class="sidebar-meta">
+    <a href="https://guide.organizedai.vip/apify-cli">Guide ↗</a><a href="https://wiki.organizedai.vip/apify-cli">Wiki ↗</a><a href="https://arch.organizedai.vip/apify-cli">Arch ↗</a>
+  </div>
+  <hr class="sidebar-divider" style="margin-top:12px">
+  <div class="sidebar-meta"><span>apify-cli</span><span>6 sections</span><span>CLI · MCP · Docker</span></div>
+</nav>
+<main>
+<div class="hero" id="home">
+  <div class="hero-eyebrow">APIFY CLI // COMPANION GUIDE // ORGANIZED AI</div>
+  <h1>Anyone can build an Actor.<br>Reach it from everywhere.</h1>
+  <p class="hero-sub">An Actor is a small cloud program: it takes input, does a job, returns output. The Apify CLI lets you build one on your machine and push it to the cloud in minutes. Once it is up, you can call it from the terminal, Claude Code, Cursor, and Codex, the same Actor, four front doors.</p>
+  <div class="pills">
+    <div class="pill"><strong>1</strong> CLI</div>
+    <div class="pill"><strong>4</strong> front doors</div>
+    <div class="pill"><strong>$5/mo</strong> free tier</div>
+    <div class="pill">any language</div>
+    <div class="pill">Docker under the hood</div>
+  </div>
+</div>
+<div class="section" id="overview">
+  <div class="section-comment">// CORE IDEA</div>
+  <h1>One Actor, four front doors</h1>
+  <p class="lead">Build the logic once with the CLI. Push it. From then on the same Actor is reachable as a terminal command, as an MCP tool inside Claude Code, Cursor, and Codex, and as a plain HTTPS endpoint. You never rebuild it per client, you just point each client at it.</p>
+  <div class="badge-row">
+    <span class="badge by">Apify CLI</span><span class="badge bt">MCP server</span><span class="badge ba">Docker container</span><span class="badge bg">Dataset output</span><span class="badge bm">Node 18+</span>
+  </div>
+<pre class="ascii">
+                         ONE ACTOR · FOUR FRONT DOORS
+
+     <span class="hi">you build once</span>                                <span class="hg">access anywhere</span>
+   ┌───────────────┐        ┌──────────────┐        ┌────────────────────────┐
+   │  <span class="ha">apify create</span> │───────▶│  <span class="hi">apify push</span>  │───────▶│  <span class="ht">terminal</span>   apify call │
+   │  write logic  │        │  build in    │        │  <span class="ht">Claude Code</span>  MCP tool  │
+   │  <span class="ha">apify run</span>    │        │  the cloud   │        │  <span class="ht">Cursor</span>       MCP tool  │
+   └───────────────┘        └──────────────┘        │  <span class="ht">Codex</span>        MCP tool  │
+                                                     │  <span class="hg">HTTPS</span>        REST API  │
+                                                     └────────────────────────┘
+</pre>
+  <div class="kicker-grid">
+    <div class="kicker"><div class="kicker-val">minutes</div><div class="kicker-lbl">empty folder → deployed Actor</div></div>
+    <div class="kicker"><div class="kicker-val">1 cmd</div><div class="kicker-lbl">wires MCP into each editor</div></div>
+    <div class="kicker"><div class="kicker-val">30/s</div><div class="kicker-lbl">MCP requests per user</div></div>
+  </div>
+  <h2>Explore the guide</h2>
+  <div class="nav-cards">
+    <a class="nav-card" href="#build"><div class="nav-card-title">Build an Actor</div><div class="nav-card-sub">Install, login, create, run, push</div><div class="nav-card-tags"><span class="tag">cli</span><span class="tag">workflow</span></div></a>
+    <a class="nav-card" href="#access"><div class="nav-card-title">Access from anywhere</div><div class="nav-card-sub">Terminal · Claude Code · Cursor · Codex</div><div class="nav-card-tags"><span class="tag">mcp</span><span class="tag">4 doors</span></div></a>
+    <a class="nav-card" href="#publish"><div class="nav-card-title">Share on the Store</div><div class="nav-card-sub">Publish once, your team forks it</div><div class="nav-card-tags"><span class="tag">store</span><span class="tag">team</span></div></a>
+    <a class="nav-card" href="https://arch.organizedai.vip/apify-cli"><div class="nav-card-title">Architecture ↗</div><div class="nav-card-sub">Access topology & MCP request flow</div><div class="nav-card-tags"><span class="tag">arch</span></div></a>
+  </div>
+</div>
+
+<div class="section" id="build">
+  <div class="section-comment">// BUILD AN ACTOR</div>
+  <h1>From empty folder to deployed, in five commands</h1>
+  <p class="lead">The CLI runs Actors locally for fast iteration, then pushes the exact same code to the cloud where it builds into a Docker image. You do not need Docker knowledge to start, the templates handle it.</p>
+  <h3>1 · Install &amp; log in</h3>
+<pre>
+# npm (Node 18+): or: curl -fsSL https://apify.com/install-cli.sh | bash
+npm install -g apify-cli
+
+# authorize the CLI with your Apify API token (stored in ~/.apify)
+apify login
+</pre>
+  <h3>2 · Scaffold from a template</h3>
+<pre>
+# interactive: pick a JS/TS or Python template (each ships AGENTS.md for AI coding)
+apify create my-actor
+cd my-actor
+</pre>
+  <h3>3 · Run locally, then push</h3>
+<pre>
+# run on your machine against local input: iterate fast
+apify run
+
+# upload + build in the Apify cloud (Actor must be built before cloud runs)
+apify push
+</pre>
+  <p>That is the whole loop: <code>create</code> → edit logic → <code>run</code> → <code>push</code>. Input is defined by <code>.actor/INPUT_SCHEMA.json</code>, output lands in a Dataset. See the <a href="https://wiki.organizedai.vip/apify-cli">Wiki</a> for what each of those terms means.</p>
+  <div class="verdict">
+    <div class="verdict-row"><div class="vkey">No lock-in</div><div class="vval"><strong>Actors run as Docker containers, so any language works.</strong> JavaScript/Node and Python have the deepest SDK + Crawlee support.</div></div>
+  </div>
+</div>
+
+<div class="section" id="access">
+  <div class="section-comment">// ACCESS FROM ANYWHERE</div>
+  <h1>Terminal, Claude Code, Cursor, Codex</h1>
+  <p class="lead">This is the part most people miss. Your Actor is not trapped in the Apify Console. One CLI command wires it into your AI editors as an MCP tool, and it is always reachable from the terminal and over HTTPS.</p>
+
+  <h3>Door 1 · Terminal</h3>
+<pre>
+# call any Actor by name, pass JSON input, read the dataset back
+apify call my-actor --input '{ "startUrls": ["https://example.com"] }'
+
+# or hit the REST API from anything that speaks HTTP
+curl "https://api.apify.com/v2/acts/USERNAME~my-actor/runs/last/dataset/items?token=APIFY_TOKEN"
+</pre>
+
+  <h3>Doors 2–4 · Claude Code, Cursor, Codex (one command each)</h3>
+  <p>The CLI installs the Apify MCP server into a client's own config. Supported clients: <code>claude-code</code>, <code>cursor</code>, <code>codex</code>, <code>vscode</code>, <code>kiro</code>, <code>antigravity</code>. It reuses the token from <code>apify login</code>.</p>
+<pre>
+apify mcp install claude-code
+apify mcp install cursor
+apify mcp install codex
+
+# scope it down to just the tools/Actors you want exposed
+apify mcp install cursor --tools search-actors,apify/rag-web-browser
+</pre>
+  <p>Prefer wiring it by hand, or using Claude Desktop's connector directory? Point the client at the hosted endpoint and approve the OAuth prompt in your browser, no token in a file:</p>
+<pre>
+{
+  "mcpServers": {
+    "apify": { "url": "https://mcp.apify.com" }
+  }
+}
+</pre>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Front door</th><th>How you reach the Actor</th><th>Setup</th></tr></thead>
+    <tbody>
+      <tr><td class="feat">Terminal</td><td><code>apify call</code> / REST API</td><td class="yes">✓ built in</td></tr>
+      <tr><td class="feat">Claude Code</td><td>MCP tool</td><td class="win">apify mcp install claude-code</td></tr>
+      <tr><td class="feat">Cursor</td><td>MCP tool</td><td class="win">apify mcp install cursor</td></tr>
+      <tr><td class="feat">Codex</td><td>MCP tool</td><td class="win">apify mcp install codex</td></tr>
+      <tr><td class="feat">Claude Desktop</td><td>MCP connector</td><td>connector directory / <code>mcp.apify.com</code></td></tr>
+    </tbody>
+  </table></div>
+  <p>Once connected, the assistant can <code>search-actors</code>, read an Actor's schema, and <code>call-actor</code> on demand, then pull results with <code>get-dataset-items</code>. It discovers your Actor without you pre-configuring it.</p>
+</div>
+
+<div class="section" id="publish">
+  <div class="section-comment">// SHARE ON THE STORE</div>
+  <h1>Publish once, the team forks it</h1>
+  <p class="lead">A built Actor is already private-usable. Publishing it to the Apify Store makes it discoverable and forkable, so a teammate runs the same Actor instead of rebuilding your logic. This is how a personal primitive becomes team leverage.</p>
+  <ul class="steps">
+    <li><strong>Add the essentials</strong>: a clear <code>.actor/INPUT_SCHEMA.json</code> and a real <code>README.md</code> so others can run it without asking you.</li>
+    <li><strong>Complete publication info</strong>: Console → your Actor → Publication: icon, name, short description, categories.</li>
+    <li><strong>Publish to Store</strong>: click Publish when eligible; working runs and honest docs are expected.</li>
+    <li><strong>Monetize (optional)</strong>: pay-per-result, pay-per-event, or rental from the Monetization tab.</li>
+  </ul>
+  <div class="verdict">
+    <div class="verdict-row"><div class="vkey">The point</div><div class="vval"><strong>One published Actor, infinite forks, $0 to the team.</strong> The captured logic stays one source of truth instead of scattering across laptops.</div></div>
+  </div>
+</div>
+
+<div class="section" id="stack">
+  <div class="section-comment">// WHAT IT RUNS ON</div>
+  <h1>Stack &amp; conventions</h1>
+  <p class="lead">You write standard code; the platform handles container build, proxies, storage, scheduling, and an HTTPS API. Node 18+ is required for the CLI and the local MCP server.</p>
+  <div class="cards">
+    <div class="card"><h3>Apify CLI</h3><p><code>create · run · push · call · pull · mcp install</code>. Stores your token in <code>~/.apify</code>.</p></div>
+    <div class="card"><h3>Apify SDK + Crawlee</h3><p><code>Actor.init()</code>, <code>Actor.getInput()</code>, <code>Actor.pushData()</code>; Cheerio/Playwright crawlers.</p></div>
+    <div class="card"><h3>MCP server</h3><p>Hosted at <code>mcp.apify.com</code> (Streamable HTTP + OAuth) or local <code>npx @apify/actors-mcp-server</code>.</p></div>
+    <div class="card"><h3>Agent Skills</h3><p>Official Apify skills auto-discovered by Claude Code, Cursor, Codex; <code>apify help --skill</code> prints a SKILL.md.</p></div>
+  </div>
+<pre>
+my-actor/
+  .actor/
+    actor.json          # links local project to the platform Actor
+    INPUT_SCHEMA.json   # defines the input form + validation
+  src/                  # your entrypoint: Actor.init() ... Actor.exit()
+  Dockerfile            # how the Actor builds in the cloud
+  AGENTS.md             # context for AI coding assistants
+</pre>
+</div>
+
+<div class="section" id="deploy">
+  <div class="section-comment">// RUN IT FOR REAL</div>
+  <h1>Run, schedule, read results</h1>
+  <p class="lead">After <code>apify push</code>, start it from the Console, the terminal, an editor, or on a schedule. Results always land in a Dataset you can read over the API.</p>
+<pre>
+# run in the cloud and wait for results
+apify call my-actor --input '{ "maxItems": 50 }'
+
+# read the latest run's dataset
+curl "https://api.apify.com/v2/acts/USERNAME~my-actor/runs/last/dataset/items?token=APIFY_TOKEN"
+</pre>
+  <p>Schedules, webhooks (Slack, Sheets, any HTTP endpoint), and storage all come with the platform, no infra to run. Free tier includes ~$5/month of compute to start.</p>
+
+  <div class="freebie">
+    <div>
+      <h3>Bonus freebie</h3>
+      <p style="color:var(--text);font-weight:600;margin-bottom:6px">Scan for the workshop drop</p>
+      <p>The full build-your-own-Actor session, free primitives, and the Plugin Watcher fork are waiting behind this code. Point your phone, claim your seat.</p>
+      <p style="margin-top:8px"><a href="https://workshops.organizedai.vip/offer">workshops.organizedai.vip/offer</a></p>
+    </div>
+    <div>
+      <div class="qr"><img src="data:image/png;base64,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" alt="workshops.organizedai.vip/offer"></div>
+      <div class="qr-cap">workshops.organizedai.vip/offer</div>
+    </div>
+  </div>
+</div>
+</main></div>
+<footer>apify-cli companion · <a href="https://guide.organizedai.vip/apify-cli">guide</a> · <a href="https://wiki.organizedai.vip/apify-cli">wiki</a> · <a href="https://arch.organizedai.vip/apify-cli">arch</a> · <a href="https://organizedai.vip">organizedai.vip</a></footer>
+<script>
+const links=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('.section[id]');
+function setActive(){let c='';sections.forEach(s=>{if(window.scrollY>=s.offsetTop-80)c=s.id});links.forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+c))}
+window.addEventListener('scroll',setActive,{passive:true});setActive();
+</script></body></html>
