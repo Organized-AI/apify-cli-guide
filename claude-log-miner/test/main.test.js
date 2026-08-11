@@ -43,7 +43,14 @@ describe('agent session miner', () => {
         expect(record.packages).toContain('apify-cli');
         expect(record.fileExtensions).toContain('.js');
         expect(record.keywordDomains).toEqual(expect.arrayContaining(['aiAgents', 'apify', 'github']));
-        expect(record.pluginOpportunitySignals.map((signal) => signal.name)).toContain('apify-actor-ops');
+        expect(record.pluginOpportunitySignals).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    name: 'apify-cli-tooling',
+                    evidence: expect.arrayContaining(['package:apify-cli']),
+                }),
+            ]),
+        );
     });
 
     it('extracts Codex metadata and plugin creation signals', async () => {
@@ -86,8 +93,11 @@ describe('agent session miner', () => {
         expect(record.cwd).toBe('/Users/example/project');
         expect(record.messageCounts.user).toBe(1);
         expect(record.keywordDomains).toEqual(expect.arrayContaining(['aiAgents', 'commerce']));
-        expect(record.pluginOpportunitySignals.map((signal) => signal.name)).toEqual(
-            expect.arrayContaining(['codex-session-intelligence', 'shopify-checkout-for-gtm']),
+        expect(record.pluginOpportunitySignals).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({ name: 'shopify-checkout-workflow' }),
+                expect.objectContaining({ name: 'checkout-gtm-workflow' }),
+            ]),
         );
     });
 
@@ -97,9 +107,10 @@ describe('agent session miner', () => {
                 {
                     agent: 'codex',
                     pluginOpportunitySignals: [
-                        { name: 'shopify-checkout-for-gtm', score: 3 },
-                        { name: 'codex-session-intelligence', score: 2 },
+                        { name: 'shopify-checkout-for-gtm', score: 4 },
+                        { name: 'checkout-gtm-workflow', score: 6, evidence: ['phrase:checkout-gtm'] },
                     ],
+                    keywordDomains: ['commerce'],
                 },
             ],
             {
@@ -108,17 +119,42 @@ describe('agent session miner', () => {
             },
         );
 
-        expect(opportunities[0]).toMatchObject({
+        expect(opportunities.find((opportunity) => opportunity.name === 'shopify-checkout-for-gtm')).toMatchObject({
             name: 'shopify-checkout-for-gtm',
             installedMatch: true,
             recommendation: 'Use or tune existing capability before building custom.',
         });
-        expect(opportunities[1]).toMatchObject({
-            name: 'codex-session-intelligence',
+        expect(opportunities.find((opportunity) => opportunity.name === 'checkout-gtm-workflow')).toMatchObject({
+            name: 'checkout-gtm-workflow',
+            description: expect.stringContaining('phrase:checkout-gtm'),
+            effectiveness: 2,
             installedMatch: false,
             marketplaceMatch: false,
-            recommendation: 'Candidate for a custom Codex plugin or skill.',
+            recommendation: 'Candidate for a custom skill based on 1 matching session(s).',
         });
+    });
+
+    it('does not emit canned opportunities when logs do not contain matching evidence', async () => {
+        const dir = await mkdtemp(path.join(tmpdir(), 'unique-session-miner-'));
+        const sessionPath = path.join(dir, 'session.jsonl');
+        await writeFile(
+            sessionPath,
+            JSON.stringify({
+                timestamp: '2026-08-11T10:00:00.000Z',
+                type: 'user',
+                message: {
+                    role: 'user',
+                    content: 'Tune the cobalt billing reconciliation workflow around finops invoices.',
+                },
+            }),
+        );
+
+        const record = await mineSessionFile(sessionPath);
+        const names = record.pluginOpportunitySignals.map((signal) => signal.name);
+
+        expect(names).toContain('cobalt-billing-workflow');
+        expect(names).not.toContain('apify-actor-ops');
+        expect(names).not.toContain('codex-session-intelligence');
     });
 
     it('resolves JSONL files from a directory path', async () => {

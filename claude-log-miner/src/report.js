@@ -1,55 +1,16 @@
-const OPPORTUNITY_DETAILS = {
-    'apify-actor-ops': {
-        effectiveness: 5,
-        description:
-            'High-leverage Actor operations skill for creating, running, deploying, inspecting datasets, and routing Actor results back into agent workflows.',
-    },
-    'codex-session-intelligence': {
-        effectiveness: 5,
-        description:
-            'Purpose-built session-log intelligence layer for finding repeated work patterns, tool gaps, and reusable plugin or skill candidates across Codex and Claude Code.',
-    },
-    'cloudflare-worker-ops': {
-        effectiveness: 4,
-        description:
-            'Operational helper for Wrangler deploys, Worker Assets, routes, vanity paths, and common Cloudflare publishing checks.',
-    },
-    'repo-pr-automation': {
-        effectiveness: 4,
-        description:
-            'Repository and pull-request automation for recurring GitHub triage, review response, CI repair, and branch hygiene.',
-    },
-    'shopify-checkout-for-gtm': {
-        effectiveness: 4,
-        description:
-            'Focused Shopify checkout tracking workflow for GTM, sGTM, Meta CAPI, Stape, and purchase-event validation.',
-    },
-    'knowledge-workflow': {
-        effectiveness: 3,
-        description:
-            'Knowledge-work routing for recurring Drive, Docs, Notion, Slack, meeting notes, and wiki synthesis tasks.',
-    },
-    'commerce-analytics': {
-        effectiveness: 3,
-        description:
-            'Commerce analytics assistant for Stripe, Shopify, HubSpot, ad attribution, conversion events, and reporting handoffs.',
-    },
-    'video-production-pipeline': {
-        effectiveness: 3,
-        description:
-            'Media production workflow for captions, voiceover, HyperFrames, Remotion, shorts, and reusable video assembly steps.',
-    },
-};
-
 export function buildImportPlan(summary) {
     const opportunities = (summary.pluginOpportunities ?? []).map((opportunity) => ({
         id: opportunity.name,
         title: toTitle(opportunity.name),
-        description: describeOpportunity(opportunity.name),
-        effectiveness: rateOpportunity(opportunity.name),
+        description:
+            opportunity.description ??
+            'Data-backed opportunity inferred from this user session data. Review the evidence before importing.',
+        effectiveness: opportunity.effectiveness ?? 1,
         score: opportunity.score,
         sessions: opportunity.sessions,
         agents: opportunity.agents,
+        domains: opportunity.domains ?? [],
+        evidence: opportunity.evidence ?? [],
         installedMatch: opportunity.installedMatch,
         marketplaceMatch: opportunity.marketplaceMatch,
         recommendation: opportunity.recommendation,
@@ -276,6 +237,11 @@ const statusEl = document.getElementById('status');
 const fallbackCommandEl = document.getElementById('fallbackCommand');
 
 function renderOpportunities() {
+  if (!state.importPlan.opportunities.length) {
+    opportunitiesEl.innerHTML = '<p>No importable plugin opportunities met the evidence threshold for this run. Scan more sessions or raise maxFiles to find repeated patterns.</p>';
+    return;
+  }
+
   opportunitiesEl.innerHTML = state.importPlan.opportunities.map((opportunity) => {
     const checked = opportunity.defaultSelected ? 'checked' : '';
     const badgeClass = opportunity.installedMatch || opportunity.marketplaceMatch ? 'ok' : 'warn';
@@ -384,17 +350,6 @@ function toTitle(value) {
         .split('-')
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(' ');
-}
-
-function describeOpportunity(name) {
-    return (
-        OPPORTUNITY_DETAILS[name]?.description ??
-        'Imported opportunity inferred from repeated session-log signals. Review recent sessions before turning it into a permanent plugin.'
-    );
-}
-
-function rateOpportunity(name) {
-    return OPPORTUNITY_DETAILS[name]?.effectiveness ?? 2;
 }
 
 function redactHomePath(value) {

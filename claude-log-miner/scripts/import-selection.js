@@ -91,6 +91,8 @@ Imported for ${client} from Agent Session Miner.
 - Effectiveness: ${opportunity.effectiveness ?? 'unrated'}/5
 - Sessions: ${opportunity.sessions}
 - Agents: ${(opportunity.agents ?? []).join(', ') || 'unknown'}
+- Domains: ${(opportunity.domains ?? []).join(', ') || 'unknown'}
+- Evidence: ${(opportunity.evidence ?? []).join(', ') || 'none'}
 - Recommendation: ${opportunity.recommendation}
 
 ## Description

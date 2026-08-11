@@ -20,15 +20,78 @@ const DOMAIN_KEYWORDS = new Map([
     ['knowledge', /\b(docs|document|drive|notion|slack|granola|meeting|wiki|notes)\b/iu],
 ]);
 
-const PLUGIN_SIGNAL_KEYWORDS = new Map([
-    ['shopify-checkout-for-gtm', /\b(shopify|checkout|gtm|sgtm|google tag manager|meta capi|stape)\b/iu],
-    ['apify-actor-ops', /\b(apify|actor|actors|dataset|key-value store|request queue|crawlee)\b/iu],
-    ['codex-session-intelligence', /\b(codex|claude code|session logs|jsonl|tool_use|mcp|plugin|skill)\b/iu],
-    ['video-production-pipeline', /\b(video|caption|subtitles|voiceover|hyperframes|remotion|heygen|faceless)\b/iu],
-    ['cloudflare-worker-ops', /\b(cloudflare|worker|wrangler|pages|durable object|r2|kv)\b/iu],
-    ['commerce-analytics', /\b(stripe|shopify|hubspot|analytics|purchase event|conversion|ads)\b/iu],
-    ['knowledge-workflow', /\b(google drive|docs|slides|sheets|notion|slack|granola|meeting notes)\b/iu],
-    ['repo-pr-automation', /\b(github|pull request|review comments|ci|issue|branch|commit)\b/iu],
+const GENERIC_OPPORTUNITY_WORDS = new Set([
+    'agent',
+    'agents',
+    'all',
+    'also',
+    'and',
+    'answer',
+    'any',
+    'apple',
+    'are',
+    'assistant',
+    'before',
+    'build',
+    'can',
+    'check',
+    'chicago',
+    'code',
+    'codex',
+    'com',
+    'context',
+    'current',
+    'cwd',
+    'create',
+    'custom',
+    'data',
+    'default',
+    'details',
+    'does',
+    'file',
+    'files',
+    'for',
+    'from',
+    'has',
+    'have',
+    'here',
+    'into',
+    'json',
+    'jsonl',
+    'library',
+    'latest',
+    'local',
+    'make',
+    'mobile',
+    'now',
+    'output',
+    'please',
+    'plugin',
+    'plugins',
+    'project',
+    'related',
+    'run',
+    'session',
+    'sessions',
+    'should',
+    'skill',
+    'skills',
+    'task',
+    'that',
+    'the',
+    'their',
+    'this',
+    'tool',
+    'tools',
+    'use',
+    'user',
+    'users',
+    'want',
+    'with',
+    'work',
+    'workdir',
+    'workflow',
+    'workflows',
 ]);
 
 const PACKAGE_PATTERNS = [
@@ -169,9 +232,10 @@ export async function mineSessionFile(filePath) {
         packages: [...packages].sort(),
         fileExtensions: [...fileExtensions].sort(),
         keywordDomains: [...domains].sort(),
-        pluginOpportunitySignals: sortedCounts(pluginSignals).map(({ name, count }) => ({
+        pluginOpportunitySignals: sortedSignals(pluginSignals).map(({ name, score, evidence }) => ({
             name,
-            score: count,
+            score,
+            evidence,
             installedMatch: null,
             marketplaceMatch: null,
         })),
@@ -218,17 +282,22 @@ export function summarizePluginOpportunities(records, inventory = {}) {
                 score: 0,
                 sessions: 0,
                 agents: new Set(),
+                domains: new Set(),
+                evidence: new Set(),
                 installedMatch: installed.has(normalizeCapabilityName(signal.name)),
                 marketplaceMatch: marketplace.has(normalizeCapabilityName(signal.name)),
             };
             current.score += Math.min(signal.score, 10);
             current.sessions += 1;
             if (record.agent) current.agents.add(record.agent);
+            for (const domain of record.keywordDomains ?? []) current.domains.add(domain);
+            for (const evidence of signal.evidence ?? []) current.evidence.add(evidence);
             scores.set(signal.name, current);
         }
     }
 
     return [...scores.values()]
+        .filter((item) => item.score >= 4 || item.sessions >= 2)
         .sort(
             (left, right) =>
                 right.score - left.score || right.sessions - left.sessions || left.name.localeCompare(right.name),
@@ -238,12 +307,16 @@ export function summarizePluginOpportunities(records, inventory = {}) {
             score: item.score,
             sessions: item.sessions,
             agents: [...item.agents].sort(),
+            domains: [...item.domains].sort(),
+            evidence: [...item.evidence].sort().slice(0, 8),
+            description: describeDataBackedOpportunity(item),
+            effectiveness: rateDataBackedOpportunity(item),
             installedMatch: item.installedMatch,
             marketplaceMatch: item.marketplaceMatch,
             recommendation:
                 item.installedMatch || item.marketplaceMatch
                     ? 'Use or tune existing capability before building custom.'
-                    : 'Candidate for a custom Codex plugin or skill.',
+                    : `Candidate for a custom skill based on ${item.sessions} matching session(s).`,
         }));
 }
 
@@ -318,6 +391,7 @@ function collectFromEvent(event, state) {
                 source: event.payload?.source,
             },
             state,
+            { includePhrases: false },
         );
         return;
     }
@@ -325,55 +399,86 @@ function collectFromEvent(event, state) {
     if (event.type === 'response_item' && event.payload?.role === 'developer') return;
     if (event.type === 'response_item' && event.payload?.role === 'system') return;
 
-    collectFromValue(event, state);
+    const role =
+        event.type === 'user' || event.type === 'assistant' ? event.type : (event.message?.role ?? event.payload?.role);
+
+    if (role === 'user') {
+        collectFromValue(
+            event.message?.content ?? event.content ?? event.payload?.content ?? event.payload?.message,
+            state,
+            {
+                includePhrases: true,
+            },
+        );
+        return;
+    }
+
+    collectFromValue(event, state, { includePhrases: role === 'user' });
 }
 
-function collectFromValue(value, state) {
+function collectFromValue(value, state, { includePhrases = true } = {}) {
     if (typeof value === 'string') {
-        collectTextSignals(value, state);
+        collectTextSignals(value, state, { includePhrases });
         return;
     }
 
     if (Array.isArray(value)) {
-        for (const item of value) collectFromValue(item, state);
+        for (const item of value) collectFromValue(item, state, { includePhrases });
         return;
     }
 
     if (!value || typeof value !== 'object') return;
 
+    if (
+        (value.type === 'text' || value.type === 'input_text' || value.type === 'output_text') &&
+        typeof (value.text ?? value.input_text ?? value.output_text) === 'string'
+    ) {
+        collectFromValue(value.text ?? value.input_text ?? value.output_text, state, { includePhrases });
+        return;
+    }
+
     if (value.type === 'tool_use' && typeof value.name === 'string') {
         increment(state.tools, value.name);
-        collectMcpServer(value.name, state.mcpServers, state.domains);
+        collectMcpServer(value.name, state.mcpServers, state.domains, state.pluginSignals);
     }
 
     if (typeof value.tool_name === 'string') {
         increment(state.tools, value.tool_name);
-        collectMcpServer(value.tool_name, state.mcpServers, state.domains);
+        collectMcpServer(value.tool_name, state.mcpServers, state.domains, state.pluginSignals);
     }
 
     if (value.type === 'function_call' && typeof value.name === 'string') {
         increment(state.tools, value.name);
-        collectMcpServer(value.name, state.mcpServers, state.domains);
+        collectMcpServer(value.name, state.mcpServers, state.domains, state.pluginSignals);
     }
 
     if (typeof value.name === 'string' && typeof value.input === 'object' && value.type === 'tool_use') {
-        collectFromValue(value.input, state);
+        collectFromValue(value.input, state, { includePhrases });
     }
 
     for (const [key, nested] of Object.entries(value)) {
         if (value.type === 'tool_use' && key === 'name') continue;
-        collectFromValue(nested, state);
+        collectFromValue(nested, state, { includePhrases });
     }
 }
 
-function collectTextSignals(text, { mcpServers, packages, fileExtensions, domains, pluginSignals }) {
-    collectMcpServer(text, mcpServers, domains);
+function collectTextSignals(
+    text,
+    { mcpServers, packages, fileExtensions, domains, pluginSignals },
+    { includePhrases },
+) {
+    collectMcpServer(text, mcpServers, domains, pluginSignals);
 
     for (const pattern of PACKAGE_PATTERNS) {
         pattern.lastIndex = 0;
         for (const match of text.matchAll(pattern)) {
             for (const packageName of match[1].trim().split(/\s+/u)) {
-                if (packageName && !packageName.startsWith('-')) packages.add(packageName);
+                if (packageName && !packageName.startsWith('-')) {
+                    packages.add(packageName);
+                    incrementSignal(pluginSignals, `${normalizeCapabilityName(packageName)}-tooling`, 4, [
+                        `package:${packageName}`,
+                    ]);
+                }
             }
         }
     }
@@ -384,20 +489,25 @@ function collectTextSignals(text, { mcpServers, packages, fileExtensions, domain
     }
 
     for (const [domain, pattern] of DOMAIN_KEYWORDS) {
-        if (pattern.test(text)) domains.add(domain);
+        if (pattern.test(text)) {
+            domains.add(domain);
+        }
     }
 
-    for (const [signal, pattern] of PLUGIN_SIGNAL_KEYWORDS) {
-        if (pattern.test(text)) increment(pluginSignals, signal);
+    if (includePhrases) {
+        for (const phrase of extractOpportunityPhrases(text)) {
+            incrementSignal(pluginSignals, `${phrase}-workflow`, 2, [`phrase:${phrase}`]);
+        }
     }
 }
 
-function collectMcpServer(value, servers, domains) {
+function collectMcpServer(value, servers, domains, pluginSignals) {
     const text = String(value);
     const matches = text.matchAll(/\bmcp__([a-z0-9_-]+)__[a-z0-9_-]+\b/giu);
     for (const match of matches) {
         increment(servers, match[1]);
         if (DOMAIN_KEYWORDS.has(match[1])) domains.add(match[1]);
+        incrementSignal(pluginSignals, `${normalizeCapabilityName(match[1])}-mcp-workflow`, 4, [`mcp:${match[1]}`]);
     }
 }
 
@@ -458,8 +568,72 @@ function increment(map, key) {
     map.set(key, (map.get(key) ?? 0) + 1);
 }
 
+function incrementSignal(map, key, score = 1, evidence = []) {
+    const normalizedKey = normalizeCapabilityName(key);
+    if (!normalizedKey || normalizedKey.length < 4) return;
+
+    const current = map.get(normalizedKey) ?? { score: 0, evidence: new Set() };
+    current.score += score;
+    for (const item of evidence.filter(Boolean)) current.evidence.add(item);
+    map.set(normalizedKey, current);
+}
+
 function sortedCounts(map) {
     return [...map.entries()]
         .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
         .map(([name, count]) => ({ name, count }));
+}
+
+function sortedSignals(map) {
+    return [...map.entries()]
+        .sort((left, right) => right[1].score - left[1].score || left[0].localeCompare(right[0]))
+        .map(([name, value]) => ({ name, score: value.score, evidence: [...value.evidence].sort() }));
+}
+
+function extractOpportunityPhrases(text) {
+    const words = cleanOpportunityText(text)
+        .toLowerCase()
+        .match(/[a-z][a-z0-9]{2,}/gu);
+    if (!words) return [];
+
+    const meaningful = words.filter((word) => !GENERIC_OPPORTUNITY_WORDS.has(word));
+    const phrases = new Set();
+
+    for (let index = 0; index < meaningful.length; index += 1) {
+        const one = meaningful[index];
+        const two = meaningful[index + 1];
+        const three = meaningful[index + 2];
+        if (one && two) phrases.add(`${one}-${two}`);
+        if (one && two && three) phrases.add(`${one}-${two}-${three}`);
+        if (phrases.size >= 12) break;
+    }
+
+    return [...phrases].filter((phrase) => phrase.length <= 60);
+}
+
+function cleanOpportunityText(text) {
+    return String(text)
+        .replace(/<[^>]*context[^>]*>[\s\S]*?<\/[^>]*context>/giu, ' ')
+        .replace(/<[^>]*environment[^>]*>[\s\S]*?<\/[^>]*environment>/giu, ' ')
+        .replace(/https?:\/\/\S+/giu, ' ')
+        .replace(/(?:~|\.)?\/[^\s"'`<>]+/gu, ' ')
+        .replace(/\b[a-z]:\\[^\s"'`<>]+/giu, ' ');
+}
+
+function describeDataBackedOpportunity(item) {
+    const evidence = [...item.evidence].slice(0, 4);
+    const domains = [...item.domains].slice(0, 4);
+    const evidenceText = evidence.length ? `Observed signals: ${evidence.join(', ')}.` : '';
+    const domainText = domains.length ? `Domains: ${domains.join(', ')}.` : '';
+    return [`Data-backed workflow opportunity found in ${item.sessions} session(s).`, domainText, evidenceText]
+        .filter(Boolean)
+        .join(' ');
+}
+
+function rateDataBackedOpportunity(item) {
+    if (item.sessions >= 5 || item.score >= 30) return 5;
+    if (item.sessions >= 3 || item.score >= 18) return 4;
+    if (item.sessions >= 2 || item.score >= 10) return 3;
+    if (item.score >= 5) return 2;
+    return 1;
 }

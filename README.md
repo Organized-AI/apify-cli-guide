@@ -34,8 +34,10 @@ All six should print `200`.
 
 The Actor lives in `claude-log-miner/`. It scans Codex and Claude Code JSONL
 session logs, extracts session taxonomy records, ranks custom plugin
-opportunities, and generates an interactive HTML report with checkboxes for
-Codex and Claude Code import plans.
+opportunities from evidence in those logs, and generates an interactive HTML
+report with checkboxes for Codex and Claude Code import plans. The generated
+opportunities are not a fixed starter list; local runs derive names,
+descriptions, ratings, and evidence from the user's own session data.
 
 Run the whole local-to-Worker flow:
 

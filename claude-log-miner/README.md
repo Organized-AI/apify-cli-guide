@@ -3,6 +3,9 @@
 An Apify Actor that reads Claude Code and Codex JSONL session logs from disk,
 pushes one structured taxonomy record per session file to the default Dataset,
 and writes a ranked list of custom plugin opportunities to `SUMMARY`.
+Recommendations are generated from the user's JSONL evidence, such as observed
+packages, MCP servers, recurring phrases, and workflow domains; they are not a
+generic catalog of plugin ideas.
 
 The default input scans:
 
@@ -21,6 +24,8 @@ The default input scans:
 - Extracts tool use events, MCP server names, package references, file
   extensions, keyword domains, message counts, agent/source metadata, and
   timestamps.
+- Builds opportunity IDs, descriptions, effectiveness ratings, and supporting
+  evidence from the scanned sessions.
 - Cross-references session signals against installed local skills and the Codex
   remote plugin catalog cache when present.
 - Writes one Dataset item per session file with `Actor.pushData()`.
