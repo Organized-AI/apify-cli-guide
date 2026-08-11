@@ -1,0 +1,24 @@
+name: Agent Session Miner
+
+on:
+    pull_request:
+    push:
+        branches: [main, master]
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: claude-log-miner
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: 24
+                  cache: npm
+                  cache-dependency-path: claude-log-miner/package-lock.json
+            - run: npm ci
+            - run: npm run format:check
+            - run: npm run lint
+            - run: npm test

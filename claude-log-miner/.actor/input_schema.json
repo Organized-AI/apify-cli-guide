@@ -1,0 +1,36 @@
+{
+    "title": "Agent Session Miner input",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "sessionGlobs": {
+            "title": "Session file paths",
+            "type": "array",
+            "description": "Claude Code and Codex JSONL files, directories, or simple **/*.jsonl globs to scan.",
+            "editor": "stringList",
+            "default": ["~/.claude/projects/**/*.jsonl", "~/.codex/archived_sessions/**/*.jsonl"],
+            "items": {
+                "type": "string"
+            }
+        },
+        "maxFiles": {
+            "title": "Maximum files",
+            "type": "integer",
+            "description": "Maximum number of JSONL session files to process in one run.",
+            "editor": "number",
+            "default": 100,
+            "minimum": 1,
+            "maximum": 10000
+        },
+        "maxOpportunities": {
+            "title": "Maximum opportunities",
+            "type": "integer",
+            "description": "Maximum ranked plugin opportunity records to write into SUMMARY.",
+            "editor": "number",
+            "default": 25,
+            "minimum": 1,
+            "maximum": 100
+        }
+    },
+    "required": ["sessionGlobs", "maxFiles", "maxOpportunities"]
+}

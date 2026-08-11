@@ -1,0 +1,14 @@
+{
+    "$schema": "https://apify.com/schemas/v1/actor.ide.json",
+    "actorSpecification": 1,
+    "name": "claude-log-miner",
+    "title": "Agent Session Miner",
+    "description": "Reads local Claude Code and Codex JSONL logs, extracts session-level taxonomy records, and ranks custom plugin opportunities.",
+    "version": "0.0",
+    "buildTag": "latest",
+    "meta": {
+        "templateId": "js-empty",
+        "generatedBy": "Codex with GPT-5"
+    },
+    "dockerfile": "../Dockerfile"
+}

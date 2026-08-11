@@ -1,0 +1,11 @@
+{
+    "actorOutputSchemaVersion": 1,
+    "title": "Agent session taxonomy",
+    "properties": {
+        "dataset": {
+            "type": "object",
+            "title": "Session taxonomy records and plugin opportunity summary",
+            "template": "{{datasetUrl}}"
+        }
+    }
+}

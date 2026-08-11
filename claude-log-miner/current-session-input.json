@@ -1,0 +1,5 @@
+{
+    "sessionGlobs": ["~/.codex/sessions/**/*.jsonl", "~/.claude/projects/**/*.jsonl"],
+    "maxFiles": 1,
+    "maxOpportunities": 15
+}
