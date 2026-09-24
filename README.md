@@ -113,3 +113,7 @@ If step 7 fails on the `guide.organizedai.vip` checks but the matching
 routing is a separate, unrelated Cloudflare Worker (`organizedai-vanity-router`)
 that this repo does not own or deploy — report that distinction rather than
 trying to fix it here.
+
+---
+
+Maintained by Jordaaan Hill ([LinkedIn](https://www.linkedin.com/in/jordaaanhill)).
